@@ -52,7 +52,7 @@ Goction is a lightweight and extensible framework designed to create, manage, an
 ### Quick Installation (Recommended)
 
 ```bash
-curl -sSL https://github.com/benoitpetit/goction/raw/branch/master/hack/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/benoitpetit/goction/master/hack/install.sh | sudo bash
 ```
 
 ### Manual Installation
