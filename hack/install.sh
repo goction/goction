@@ -53,7 +53,7 @@ cd $INSTALL_PATH
 
 # Clone the Goction repository
 print_message "Cloning Goction repository..."
-git clone https://github.com/benoitpetit/goction.git .
+git clone https://github.com/goction/goction.git .
 
 # Build the project
 print_message "Building Goction..."

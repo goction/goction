@@ -486,7 +486,7 @@ func ShowLogs(cfg *config.Config) error {
 func SelfUpdate() error {
 	// This is a placeholder. Implement actual self-update logic here.
 	fmt.Println("Self-update functionality is not yet implemented.")
-	fmt.Println("Please check https://github.com/benoitpetit/goction.git for updates.")
+	fmt.Println("Please check https://github.com/goction/goction.git for updates.")
 	return nil
 }
 
