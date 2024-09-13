@@ -37,10 +37,7 @@ Goction is a lightweight and extensible framework designed to create, manage, an
 - Flexible configuration via JSON
 - Advanced logging with logrus
 - Integration with systemd for simple service management
-- Search functionality for goctions
-- Most used goctions tracking
-- Export and import goctions for easy sharing and backup
-- Comprehensive statistics and execution history
+- Import and export functionality for easy sharing and backup of goctions
 
 ## Prerequisites
 
