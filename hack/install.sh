@@ -8,70 +8,197 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Default values
+INSTALL_DIR="/opt/goction"
+GOCTION_USER="goction"
+GOCTION_PORT=8080
+
 # Function to display messages
 print_message() {
     echo -e "${GREEN}[Goction Installer] ${1}${NC}"
 }
 
 print_error() {
-    echo -e "${RED}[Error] ${1}${NC}"
+    echo -e "${RED}[Error] ${1}${NC}" >&2
 }
 
 print_warning() {
     echo -e "${YELLOW}[Warning] ${1}${NC}"
 }
 
+print_debug() {
+    echo -e "${YELLOW}[Debug] ${1}${NC}"
+}
+
+# Function to log messages
+log_message() {
+    echo "$(date): $1" >> /var/log/goction_install.log
+}
+
+# Error handling
+trap 'print_error "An error occurred. Exiting..."; log_message "Installation failed"; exit 1' ERR
+
+# Check if the user is root
+if [ "$EUID" -ne 0 ]; then
+    print_error "This script must be run as root"
+    exit 1
+fi
+
+# Ensure SUDO_USER is set
+if [ -z "$SUDO_USER" ]; then
+    print_error "This script must be run with sudo"
+    exit 1
+fi
+
 # Preserve the user's environment
-if [ "$SUDO_USER" ]; then
-    USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
-    export PATH=$PATH:$(sudo -u $SUDO_USER bash -c 'echo $PATH')
-    export GOPATH=$(sudo -u $SUDO_USER go env GOPATH)
-fi
+USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
+USER_PATH=$(sudo -u $SUDO_USER bash -c 'echo $PATH')
+export PATH=$PATH:$USER_PATH
+print_debug "User PATH: $USER_PATH"
+print_debug "Current PATH: $PATH"
 
-# Check if Go is installed
-if ! command -v go &> /dev/null; then
-    print_error "Go is not installed. Please install Go before continuing."
-    exit 1
-fi
+# Function to check system dependencies
+check_dependencies() {
+    print_message "Checking system dependencies..."
+    
+    # Function to find command, considering both root and normal user environments
+    find_command() {
+        local cmd=$1
+        local cmd_path=""
+        
+        # Check in current PATH
+        cmd_path=$(which $cmd 2>/dev/null)
+        if [ -n "$cmd_path" ]; then
+            echo $cmd_path
+            return 0
+        fi
+        
+        # Check in user's PATH
+        cmd_path=$(sudo -u $SUDO_USER which $cmd 2>/dev/null)
+        if [ -n "$cmd_path" ]; then
+            echo $cmd_path
+            return 0
+        fi
+        
+        # Check common Go installation directories
+        for dir in "/usr/local/go/bin" "$USER_HOME/go/bin" "$USER_HOME/.go/bin" "/snap/bin"; do
+            if [ -x "$dir/$cmd" ]; then
+                echo "$dir/$cmd"
+                return 0
+            fi
+        done
+        
+        return 1
+    }
 
-# Check Go version
-GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
-MIN_VERSION="1.16"
-if [ "$(printf '%s\n' "$MIN_VERSION" "$GO_VERSION" | sort -V | head -n1)" != "$MIN_VERSION" ]; then 
-    print_error "Go version $MIN_VERSION or higher is required. You have $GO_VERSION."
-    exit 1
-fi
+    for cmd in git curl; do
+        cmd_path=$(find_command $cmd)
+        if [ -z "$cmd_path" ]; then
+            print_error "$cmd is not installed or not in PATH. Please install it and try again."
+            exit 1
+        else
+            print_debug "Found $cmd at: $cmd_path"
+        fi
+    done
 
-# Ask for the installation path
-read -p "Enter the installation path for Goction [/opt/goction]: " INSTALL_PATH
-INSTALL_PATH=${INSTALL_PATH:-/opt/goction}
+    # Special check for Go
+    GO_CMD=$(find_command go)
+    if [ -z "$GO_CMD" ]; then
+        print_error "Go is not installed or not in PATH. Please install it and try again."
+        print_debug "Searched in PATH: $PATH"
+        print_debug "Searched in user's PATH: $USER_PATH"
+        exit 1
+    else
+        print_debug "Found Go at: $GO_CMD"
+    fi
 
-# Create the installation directory
-print_message "Creating installation directory..."
-mkdir -p $INSTALL_PATH
-cd $INSTALL_PATH
+    # Check Go version
+    GO_VERSION=$($GO_CMD version 2>&1 | awk '{print $3}' | sed 's/go//')
+    MIN_VERSION="1.16"
+    if [ "$(printf '%s\n' "$MIN_VERSION" "$GO_VERSION" | sort -V | head -n1)" != "$MIN_VERSION" ]; then 
+        print_error "Go version $MIN_VERSION or higher is required. You have $GO_VERSION."
+        exit 1
+    fi
 
-# Clone the Goction repository
-print_message "Cloning Goction repository..."
-git clone https://github.com/goction/goction.git .
+    print_message "Go version $GO_VERSION found at $GO_CMD"
+    log_message "System dependencies checked"
+}
 
-# Build the project
-print_message "Building Goction..."
-go build -o goction cmd/goction/main.go
+# Function to update PATH
+update_path() {
+    print_message "Updating system PATH..."
+    echo "export PATH=\$PATH:$INSTALL_DIR" > /etc/profile.d/goction.sh
+    chmod +x /etc/profile.d/goction.sh
+    source /etc/profile.d/goction.sh
+    log_message "System PATH updated"
+}
 
-# Copy the executable
-print_message "Installing the executable..."
-cp goction /usr/local/bin/
+# Function to configure firewall
+configure_firewall() {
+    print_message "Configuring firewall..."
+    if command -v ufw >/dev/null 2>&1; then
+        ufw allow $GOCTION_PORT/tcp
+        print_message "UFW firewall rule added for port $GOCTION_PORT"
+    elif command -v firewall-cmd >/dev/null 2>&1; then
+        firewall-cmd --permanent --add-port=$GOCTION_PORT/tcp
+        firewall-cmd --reload
+        print_message "FirewallD rule added for port $GOCTION_PORT"
+    else
+        print_warning "Unable to configure firewall automatically. Please ensure port $GOCTION_PORT is open."
+    fi
+    log_message "Firewall configured for port $GOCTION_PORT"
+}
 
-# Create goction user
-print_message "Creating goction user..."
-useradd -r -s /bin/false goction
-mkdir -p /home/goction
-chown goction:goction /home/goction
+# Function to create Goction user
+create_goction_user() {
+    print_message "Creating Goction user..."
+    useradd -r -s /bin/false $GOCTION_USER
+    mkdir -p /home/$GOCTION_USER
+    chown $GOCTION_USER:$GOCTION_USER /home/$GOCTION_USER
+    log_message "Goction user created"
+}
 
-# Create systemd service file
-print_message "Creating systemd service file..."
-cat << EOF > /etc/systemd/system/goction.service
+# Function to install Goction
+install_goction() {
+    print_message "Installing Goction..."
+
+    if [ -d "$INSTALL_DIR" ]; then
+        print_warning "Installation directory $INSTALL_DIR already exists."
+        read -p "Do you want to remove the existing directory and continue? (y/N): " remove_dir
+        if [[ $remove_dir =~ ^[Yy]$ ]]; then
+            print_message "Removing existing directory..."
+            rm -rf "$INSTALL_DIR"
+        else
+            print_error "Installation cancelled by user."
+            exit 1
+        fi
+    fi
+
+    mkdir -p $INSTALL_DIR
+    git clone https://github.com/goction/goction.git $INSTALL_DIR
+    cd $INSTALL_DIR
+
+    # Ensure the current user has write permissions in the install directory
+    chown -R $SUDO_USER:$SUDO_USER $INSTALL_DIR
+
+    # Build Goction as the original user
+    sudo -u $SUDO_USER $GO_CMD build -o goction cmd/goction/main.go
+
+    # Copy the binary to /usr/local/bin and set correct permissions
+    cp goction /usr/local/bin/
+    chown root:root /usr/local/bin/goction
+    chmod 755 /usr/local/bin/goction
+
+    # Set correct ownership for the installation directory
+    chown -R $GOCTION_USER:$GOCTION_USER $INSTALL_DIR
+
+    log_message "Goction installed in $INSTALL_DIR"
+}
+
+# Function to create systemd service
+create_systemd_service() {
+    print_message "Creating systemd service..."
+    cat << EOF > /etc/systemd/system/goction.service
 [Unit]
 Description=Goction API Service
 After=network.target
@@ -79,41 +206,49 @@ After=network.target
 [Service]
 ExecStart=/usr/local/bin/goction serve
 Restart=on-failure
-User=goction
-Group=goction
+User=$GOCTION_USER
+Group=$GOCTION_USER
 Environment=PATH=/usr/bin:/usr/local/bin:$PATH
-Environment=GOPATH=$GOPATH
-WorkingDirectory=/home/goction
+WorkingDirectory=$INSTALL_DIR
 
 [Install]
 WantedBy=multi-user.target
 EOF
+    systemctl daemon-reload
+    systemctl enable goction.service
+    log_message "Systemd service created and enabled"
+}
 
-# Reload systemd
-print_message "Reloading systemd..."
-systemctl daemon-reload
+# Main installation process
+main() {
+    print_message "Starting Goction installation..."
+    log_message "Installation started"
 
-# Enable and start the service
-print_message "Enabling and starting Goction service..."
-systemctl enable goction.service
-systemctl start goction.service
+    check_dependencies
 
-# Check service status
-if systemctl is-active --quiet goction.service; then
-    print_message "Goction service is running."
-else
-    print_error "Goction service could not be started. Please check the logs with 'journalctl -u goction.service'"
-fi
+    create_goction_user
 
-# Create default goctions directory
-print_message "Creating default goctions directory..."
-mkdir -p /home/goction/.config/goction/goctions
-chown -R goction:goction /home/goction/.config/goction
+    install_goction
 
-# Display configuration information
-print_message "Installation completed!"
-print_message "You can now use the 'goction' command to manage your goctions."
-print_message "Use 'goction dashboard' to view the dashboard and get more information."
+    create_systemd_service
 
-# Final warning
-print_warning "Don't forget to secure your installation by changing default tokens and passwords."
+    update_path
+
+    read -p "Do you want to configure the firewall? (y/N): " configure_fw
+    if [[ $configure_fw =~ ^[Yy]$ ]]; then
+        configure_firewall
+    fi
+
+    systemctl start goction.service
+    print_message "Goction service started"
+
+    print_message "Goction has been successfully installed!"
+    print_message "You can now use the 'goction' command to manage your goctions."
+    print_message "Goction is running on port $GOCTION_PORT"
+    log_message "Installation completed successfully"
+}
+
+# Run the main installation process
+main
+
+exit 0
