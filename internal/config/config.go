@@ -9,16 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// Config holds the application configuration
 type Config struct {
-	GoctionsDir       string `json:"goctions_dir"`
-	Port              int    `json:"port"`
-	LogFile           string `json:"log_file"`
-	APIToken          string `json:"api_token"`
-	StatsFile         string `json:"stats_file"`
-	DashboardUsername string `json:"dashboard_username"`
-	DashboardPassword string `json:"dashboard_password"`
+	GoctionsDir string `json:"goctions_dir"`
+	Port        int    `json:"port"`
+	LogFile     string `json:"log_file"`
+	APIToken    string `json:"api_token"`
+	StatsFile   string `json:"stats_file"`
 }
 
+// Load reads the configuration file and returns a Config struct
 func Load() (*Config, error) {
 	configDir, err := getConfigDir()
 	if err != nil {
@@ -38,6 +38,7 @@ func Load() (*Config, error) {
 	return loadExistingConfig(configPath)
 }
 
+// Save writes the configuration to the config file
 func (c *Config) Save() error {
 	configDir, err := getConfigDir()
 	if err != nil {
@@ -65,6 +66,7 @@ func (c *Config) Save() error {
 	return nil
 }
 
+// Reset resets the configuration to default values
 func Reset() error {
 	configDir, err := getConfigDir()
 	if err != nil {
@@ -73,10 +75,12 @@ func Reset() error {
 
 	configPath := filepath.Join(configDir, "config.json")
 
+	// Remove the existing config file
 	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove existing config file: %w", err)
 	}
 
+	// Create a new default config
 	_, err = createDefaultConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to create new default config: %w", err)
@@ -85,12 +89,14 @@ func Reset() error {
 	return nil
 }
 
+// InitializeLogFile creates the log file if it doesn't exist
 func (c *Config) InitializeLogFile() error {
 	dir := filepath.Dir(c.LogFile)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
+	// Open the file in append mode, creating it if it doesn't exist
 	file, err := os.OpenFile(c.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create or open log file: %w", err)
@@ -99,6 +105,8 @@ func (c *Config) InitializeLogFile() error {
 
 	return nil
 }
+
+// Helper functions
 
 func getConfigDir() (string, error) {
 	if os.Geteuid() == 0 {
@@ -114,13 +122,11 @@ func getConfigDir() (string, error) {
 
 func createDefaultConfig(configPath string) (*Config, error) {
 	cfg := &Config{
-		GoctionsDir:       filepath.Join(filepath.Dir(configPath), "goctions"),
-		Port:              8080,
-		LogFile:           filepath.Join(filepath.Dir(configPath), "goction.log"),
-		APIToken:          uuid.New().String(),
-		StatsFile:         filepath.Join(filepath.Dir(configPath), "goction_stats.json"),
-		DashboardUsername: "admin",
-		DashboardPassword: uuid.New().String(),
+		GoctionsDir: filepath.Join(filepath.Dir(configPath), "goctions"),
+		Port:        8080,
+		LogFile:     filepath.Join(filepath.Dir(configPath), "goction.log"),
+		APIToken:    uuid.New().String(),
+		StatsFile:   filepath.Join(filepath.Dir(configPath), "goction_stats.json"),
 	}
 
 	if err := cfg.Save(); err != nil {
