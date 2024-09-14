@@ -195,7 +195,7 @@ install_goction() {
     echo
 
     # Update config file with dashboard credentials
-    config_file="$INSTALL_DIR/config.json"
+    config_file="~/.config/goction/config.json"
     if [ -f "$config_file" ]; then
         sed -i "s/\"dashboard_username\": \"\"/\"dashboard_username\": \"$dashboard_username\"/" "$config_file"
         sed -i "s/\"dashboard_password\": \"\"/\"dashboard_password\": \"$dashboard_password\"/" "$config_file"
