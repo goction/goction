@@ -28,19 +28,19 @@ if [ "$SUDO_USER" ]; then
     export GOPATH=$(sudo -u $SUDO_USER go env GOPATH)
 fi
 
-# Check if Go is installed
-if ! command -v go &> /dev/null; then
-    print_error "Go is not installed. Please install Go before continuing."
-    exit 1
-fi
+# # Check if Go is installed
+# if ! command -v go &> /dev/null; then
+#     print_error "Go is not installed. Please install Go before continuing."
+#     exit 1
+# fi
 
-# Check Go version
-GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
-MIN_VERSION="1.16"
-if [ "$(printf '%s\n' "$MIN_VERSION" "$GO_VERSION" | sort -V | head -n1)" != "$MIN_VERSION" ]; then 
-    print_error "Go version $MIN_VERSION or higher is required. You have $GO_VERSION."
-    exit 1
-fi
+# # Check Go version
+# GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
+# MIN_VERSION="1.16"
+# if [ "$(printf '%s\n' "$MIN_VERSION" "$GO_VERSION" | sort -V | head -n1)" != "$MIN_VERSION" ]; then 
+#     print_error "Go version $MIN_VERSION or higher is required. You have $GO_VERSION."
+#     exit 1
+# fi
 
 # Ask for the installation path
 read -p "Enter the installation path for Goction [/opt/goction]: " INSTALL_PATH
