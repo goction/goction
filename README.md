@@ -4,7 +4,7 @@
     <img src="./goction.png" alt="Logo" width="350">
 </p>
 
-Goction is a lightweight and extensible framework designed to create, manage, and execute custom actions (called "goctions") via a command-line interface (CLI) and an HTTP API. It also provides a dashboard for monitoring and managing goctions.
+Goction is a lightweight and extensible platform designed to create, manage, and execute custom actions (called "goctions") via a command-line interface (CLI) and an HTTP API. It also provides a dashboard for monitoring and managing goctions.
 
 ## Table of Contents
 
@@ -15,6 +15,7 @@ Goction is a lightweight and extensible framework designed to create, manage, an
 5. [Usage](#usage)
    - [Managing Goctions](#managing-goctions)
    - [Service Management](#service-management)
+   - [Systemd Service Management](#systemd-service-management)
    - [Using the API](#using-the-api)
    - [Dashboard and Execution](#dashboard-and-execution)
    - [Advanced Features](#advanced-features)
@@ -36,7 +37,7 @@ Goction is a lightweight and extensible framework designed to create, manage, an
 - Console-based monitoring dashboard
 - Flexible configuration via JSON
 - Advanced logging with logrus
-- Integration with systemd for simple service management
+- Integration with systemd for robust service management
 - Import and export functionality for easy sharing and backup of goctions
 
 ## Prerequisites
@@ -124,6 +125,47 @@ Stop the Goction service:
 goction stop
 ```
 
+### Systemd Service Management
+
+Goction runs as a background service managed by systemd. You can interact with the Goction service using standard systemd commands:
+
+Start the Goction service:
+```bash
+sudo systemctl start goction
+```
+
+Stop the Goction service:
+```bash
+sudo systemctl stop goction
+```
+
+Restart the Goction service:
+```bash
+sudo systemctl restart goction
+```
+
+Check the status of the Goction service:
+```bash
+sudo systemctl status goction
+```
+
+Enable the Goction service to start at boot:
+```bash
+sudo systemctl enable goction
+```
+
+Disable the Goction service from starting at boot:
+```bash
+sudo systemctl disable goction
+```
+
+View the Goction service logs:
+```bash
+sudo journalctl -u goction
+```
+
+These systemd commands provide more detailed control and information about the Goction service compared to the built-in `goction start` and `goction stop` commands, which are wrappers around these systemd commands for convenience.
+
 ### Using the API
 
 Execute a goction via the HTTP API:
@@ -147,12 +189,6 @@ goction run my_goction [arg1 arg2 ...]
 ```
 
 ### Advanced Features
-
-Show most used goctions:
-
-```bash
-goction most-used
-```
 
 Export a goction:
 
@@ -186,21 +222,21 @@ Here's an example of a simple goction:
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+    "encoding/json"
+    "fmt"
 )
 
 func ExampleGoction(args ...string) (string, error) {
-	result := fmt.Sprintf("ExampleGoction executed with %d arguments", len(args))
-	response := map[string]string{
-		"result": result,
-		"action": "example_goction",
-	}
-	jsonResponse, err := json.Marshal(response)
-	if err != nil {
-		return "", fmt.Errorf("error creating JSON response: %v", err)
-	}
-	return string(jsonResponse), nil
+    result := fmt.Sprintf("ExampleGoction executed with %d arguments", len(args))
+    response := map[string]string{
+        "result": result,
+        "action": "example_goction",
+    }
+    jsonResponse, err := json.Marshal(response)
+    if err != nil {
+        return "", fmt.Errorf("error creating JSON response: %v", err)
+    }
+    return string(jsonResponse), nil
 }
 ```
 
@@ -247,7 +283,7 @@ Ensure you keep this token confidential and change it regularly.
 
 ## Logging
 
-Logs are managed by logrus and are written to the file specified in the configuration. They can be viewed via the dashboard or by using the `goction logs` command.
+Logs are managed by logrus and are written to the file specified in the configuration. They can be viewed via the dashboard or by using the `goction logs` command. For systemd service logs, use `sudo journalctl -u goction`.
 
 ## Troubleshooting
 
@@ -255,7 +291,7 @@ If you encounter issues:
 
 1. Check the log file for error messages.
 2. Ensure all goctions are properly compiled using the `goction update` command.
-3. Verify that the Goction service is running using `goction start`.
+3. Verify that the Goction service is running using `sudo systemctl status goction`.
 4. Check your firewall settings if you're having trouble with the API.
 5. Use the `goction stats` command to check the execution history of a specific goction.
 
