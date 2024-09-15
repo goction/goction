@@ -240,10 +240,12 @@ setup_permissions() {
     usermod -aG $GOCTION_GROUP $SUDO_USER
     
     # Ensure the goction group has write access
+    chmod g+w /etc/goction/goctions
     chmod g+w /var/log/goction/goction.log
     chmod g+w /var/log/goction/goction_stats.json
     
     # Set ACL for the current user
+    setfacl -R -m u:$SUDO_USER:rwx /etc/goction/goctions
     setfacl -m u:$SUDO_USER:rw /var/log/goction/goction.log
     setfacl -m u:$SUDO_USER:rw /var/log/goction/goction_stats.json
     

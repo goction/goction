@@ -29,7 +29,7 @@ func CreateNewGoction(args []string, cfg *config.Config) error {
 	name := args[0]
 
 	goctionDir := filepath.Join(cfg.GoctionsDir, name)
-	if err := os.MkdirAll(goctionDir, 0755); err != nil {
+	if err := os.MkdirAll(goctionDir, 0775); err != nil {
 		return fmt.Errorf("failed to create goction directory: %w", err)
 	}
 
@@ -41,7 +41,7 @@ func CreateNewGoction(args []string, cfg *config.Config) error {
 	}
 
 	// Initialize go.mod
-	cmd := exec.Command("go", "mod", "init", name)
+	cmd := exec.Command("go", "mod", "init", fmt.Sprintf("goction/%s", name))
 	cmd.Dir = goctionDir
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to initialize go.mod: %w", err)
@@ -167,10 +167,17 @@ func ShowDashboard(cfg *config.Config) error {
 	return nil
 }
 
-// RunGoction executes a specific goction
 func RunGoction(name string, args []string, cfg *config.Config) error {
 	goctionPath := filepath.Join(cfg.GoctionsDir, name, name+".so")
+
+	if _, err := os.Stat(goctionPath); os.IsNotExist(err) {
+		return fmt.Errorf("goction plugin not found. Please run 'goction update %s' to build the plugin", name)
+	}
+
 	plug, err := plugin.Open(goctionPath)
+	if err != nil {
+		return fmt.Errorf("could not open goction plugin: %w", err)
+	}
 	if err != nil {
 		return fmt.Errorf("could not open goction plugin: %w", err)
 	}
