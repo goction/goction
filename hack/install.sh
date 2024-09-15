@@ -182,15 +182,19 @@ setup_permissions() {
     mkdir -p /var/log/goction
     
     # Set ownership
-    chown -R $GOCTION_USER:$GOCTION_GROUP /etc/goction
-    chown -R $GOCTION_USER:$GOCTION_GROUP /var/log/goction
+    chown -R $GOCTION_USER:$GOCTION_USER /etc/goction
+    chown -R $GOCTION_USER:$GOCTION_USER /var/log/goction
     
     # Set permissions
     chmod 755 /etc/goction
-    chmod 755 /var/log/goction
-    chmod 644 /etc/goction/config.json
-    chmod 666 /var/log/goction/goction.log
-    chmod 666 /var/log/goction/goction_stats.json
+    chmod 775 /etc/goction/goctions
+    chmod 775 /var/log/goction
+    chmod 664 /etc/goction/config.json
+    chmod 664 /var/log/goction/goction.log
+    chmod 664 /var/log/goction/goction_stats.json
+    
+    # Add current user to goction group
+    usermod -aG $GOCTION_USER $SUDO_USER
     
     log_message "Permissions set up completed"
 }

@@ -25,17 +25,20 @@ type Config struct {
 
 // Load reads the configuration file and returns a Config struct
 func Load() (*Config, error) {
-	if err := os.MkdirAll(ConfigDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create config directory: %w", err)
-	}
-
 	configPath := filepath.Join(ConfigDir, "config.json")
 
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return createDefaultConfig(configPath)
+	file, err := os.Open(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open config file: %w", err)
+	}
+	defer file.Close()
+
+	var cfg Config
+	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to decode config file: %w", err)
 	}
 
-	return loadExistingConfig(configPath)
+	return &cfg, nil
 }
 
 // Save writes the configuration to the config file
@@ -93,21 +96,21 @@ func (c *Config) InitializeLogFile() error {
 }
 
 func createDefaultConfig(configPath string) (*Config, error) {
-    cfg := &Config{
-        GoctionsDir:        "/etc/goction/goctions",
-        Port:               8080,
-        LogFile:            "/var/log/goction/goction.log",
-        APIToken:           uuid.New().String(),
-        StatsFile:          "/var/log/goction/goction_stats.json",
-        DashboardUsername:  "admin",
-        DashboardPassword:  uuid.New().String(),
-    }
+	cfg := &Config{
+		GoctionsDir:       "/etc/goction/goctions",
+		Port:              8080,
+		LogFile:           "/var/log/goction/goction.log",
+		APIToken:          uuid.New().String(),
+		StatsFile:         "/var/log/goction/goction_stats.json",
+		DashboardUsername: "admin",
+		DashboardPassword: uuid.New().String(),
+	}
 
-    if err := cfg.Save(); err != nil {
-        return nil, fmt.Errorf("failed to save default config: %w", err)
-    }
+	if err := cfg.Save(); err != nil {
+		return nil, fmt.Errorf("failed to save default config: %w", err)
+	}
 
-    return cfg, nil
+	return cfg, nil
 }
 
 func loadExistingConfig(configPath string) (*Config, error) {

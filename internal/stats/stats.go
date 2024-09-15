@@ -31,28 +31,28 @@ type Manager struct {
 }
 
 func NewManager(statsFile string) (*Manager, error) {
-	// Ensure the directory exists
+	// Ensure the stats directory exists
 	dir := filepath.Dir(statsFile)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0775); err != nil {
 		return nil, fmt.Errorf("failed to create stats directory: %w", err)
 	}
 
+	// Create a new Manager instance
 	m := &Manager{
 		statsFile: statsFile,
 		stats:     make(map[string]*GoctionStats),
 		history:   make(map[string][]ExecutionRecord),
 	}
 
-	// Check if the file exists and is not empty
-	if info, err := os.Stat(statsFile); err == nil && info.Size() > 0 {
-		if err := m.load(); err != nil {
-			return nil, fmt.Errorf("failed to load stats: %w", err)
-		}
-	} else if os.IsNotExist(err) {
-		// Create an empty file if it doesn't exist
+	// Check if the stats file exists
+	if _, err := os.Stat(statsFile); os.IsNotExist(err) {
+		// If it doesn't exist, create an empty stats file
 		if err := m.save(); err != nil {
 			return nil, fmt.Errorf("failed to create initial stats file: %w", err)
 		}
+	} else if err := m.load(); err != nil {
+		// If it exists, try to load the stats
+		return nil, fmt.Errorf("failed to load stats: %w", err)
 	}
 
 	return m, nil

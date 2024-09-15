@@ -71,14 +71,16 @@ func StopService(cfg *config.Config) error {
 
 // ListGoctions lists all available goctions
 func ListGoctions(cfg *config.Config) error {
-	goctions, err := listGoctions(cfg.GoctionsDir)
+	entries, err := os.ReadDir(cfg.GoctionsDir)
 	if err != nil {
-		return fmt.Errorf("failed to list goctions: %w", err)
+		return fmt.Errorf("failed to read goctions directory: %w", err)
 	}
 
 	fmt.Println("Available Goctions:")
-	for _, goction := range goctions {
-		fmt.Println("-", goction)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			fmt.Println("-", entry.Name())
+		}
 	}
 	return nil
 }
@@ -98,6 +100,7 @@ func UpdateGoction(args []string, cfg *config.Config) error {
 	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o",
 		filepath.Join(goctionDir, name+".so"), ".")
 	cmd.Dir = goctionDir
+	cmd.Env = append(os.Environ(), "PATH="+os.Getenv("PATH")+":/usr/local/go/bin")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -300,21 +303,6 @@ func createActionTable(cfg *config.Config) (table.Model, error) {
 	t.SetStyles(s)
 
 	return t, nil
-}
-
-func listGoctions(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	var goctions []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			goctions = append(goctions, entry.Name())
-		}
-	}
-	return goctions, nil
 }
 
 func listActions(dir string) ([]Action, error) {
