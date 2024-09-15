@@ -37,23 +37,22 @@ func NewManager(statsFile string) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create stats directory: %w", err)
 	}
 
-	// Create the stats file if it doesn't exist
-	if _, err := os.Stat(statsFile); os.IsNotExist(err) {
-		file, err := os.Create(statsFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create stats file: %w", err)
-		}
-		file.Close()
-	}
-
 	m := &Manager{
 		statsFile: statsFile,
 		stats:     make(map[string]*GoctionStats),
 		history:   make(map[string][]ExecutionRecord),
 	}
 
-	if err := m.load(); err != nil && !os.IsNotExist(err) {
-		return nil, fmt.Errorf("failed to load stats: %w", err)
+	// Check if the file exists and is not empty
+	if info, err := os.Stat(statsFile); err == nil && info.Size() > 0 {
+		if err := m.load(); err != nil {
+			return nil, fmt.Errorf("failed to load stats: %w", err)
+		}
+	} else if os.IsNotExist(err) {
+		// Create an empty file if it doesn't exist
+		if err := m.save(); err != nil {
+			return nil, fmt.Errorf("failed to create initial stats file: %w", err)
+		}
 	}
 
 	return m, nil
@@ -135,10 +134,6 @@ func (m *Manager) GetExecutionHistory(name string) []ExecutionRecord {
 func (m *Manager) load() error {
 	file, err := os.Open(m.statsFile)
 	if err != nil {
-		if os.IsNotExist(err) {
-			// If the file doesn't exist, just return without error
-			return nil
-		}
 		return fmt.Errorf("failed to open stats file: %w", err)
 	}
 	defer file.Close()
@@ -162,12 +157,6 @@ func (m *Manager) load() error {
 }
 
 func (m *Manager) save() error {
-	// Ensure the directory exists
-	dir := filepath.Dir(m.statsFile)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create stats directory: %w", err)
-	}
-
 	file, err := os.Create(m.statsFile)
 	if err != nil {
 		return fmt.Errorf("failed to create stats file: %w", err)
@@ -184,7 +173,11 @@ func (m *Manager) save() error {
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(data)
+	if err := encoder.Encode(data); err != nil {
+		return fmt.Errorf("failed to encode stats: %w", err)
+	}
+
+	return nil
 }
 
 func (m *Manager) GetAllHistory() map[string][]ExecutionRecord {
