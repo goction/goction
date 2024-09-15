@@ -248,9 +248,9 @@ initialize_stats() {
     print_message "Initializing stats file..."
     
     STATS_FILE="/var/log/goction/goction_stats.json"
-    if [ ! -s "$STATS_FILE" ]; then
-        echo '{"stats":{},"history":{}}' > "$STATS_FILE"
-    fi
+    echo '{"stats":{},"history":{}}' > "$STATS_FILE"
+    chown $GOCTION_USER:$GOCTION_GROUP "$STATS_FILE"
+    chmod 664 "$STATS_FILE"
     
     log_message "Stats file initialized"
 }
