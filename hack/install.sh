@@ -219,6 +219,7 @@ setup_permissions() {
     
     # Initialize configuration if it doesn't exist
     initialize_config
+    initialize_stats
     
     # Set ownership
     chown -R $GOCTION_USER:$GOCTION_GROUP /etc/goction
@@ -229,17 +230,15 @@ setup_permissions() {
     chmod 775 /etc/goction/goctions
     chmod 775 /var/log/goction
     chmod 664 /etc/goction/config.json
-    touch /var/log/goction/goction.log
-    touch /var/log/goction/goction_stats.json
     chmod 664 /var/log/goction/goction.log
     chmod 664 /var/log/goction/goction_stats.json
     
-    # Ensure the goction user has write access
-    chown $GOCTION_USER:$GOCTION_GROUP /var/log/goction/goction.log
-    chown $GOCTION_USER:$GOCTION_GROUP /var/log/goction/goction_stats.json
-    
     # Add current user to goction group
     usermod -aG $GOCTION_GROUP $SUDO_USER
+    
+    # Ensure the goction group has write access
+    chmod g+w /var/log/goction/goction.log
+    chmod g+w /var/log/goction/goction_stats.json
     
     log_message "Permissions set up completed"
 }
@@ -253,6 +252,15 @@ initialize_stats() {
     chmod 664 "$STATS_FILE"
     
     log_message "Stats file initialized"
+}
+
+update_sudoers() {
+    print_message "Updating sudoers file..."
+    
+    # Add a line to preserve the PATH for the goction command
+    echo "Defaults!=/usr/local/bin/goction env_keep+=PATH" | sudo EDITOR='tee -a' visudo
+    
+    log_message "Sudoers file updated"
 }
 
 # Function to create systemd service
@@ -269,6 +277,7 @@ Restart=on-failure
 User=$GOCTION_USER
 Group=$GOCTION_GROUP
 WorkingDirectory=/etc/goction
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin"
 
 [Install]
 WantedBy=multi-user.target
@@ -289,6 +298,7 @@ main() {
     setup_environment
     setup_permissions
     create_systemd_service
+    update_sudoers
 
     systemctl start goction.service
     print_message "Goction service started"
