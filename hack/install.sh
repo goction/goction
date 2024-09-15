@@ -234,16 +234,45 @@ setup_permissions() {
     chmod 664 /var/log/goction/goction.log
     chmod 664 /var/log/goction/goction_stats.json
     
+    # Ensure the goction user has write access
+    chown $GOCTION_USER:$GOCTION_GROUP /var/log/goction/goction.log
+    chown $GOCTION_USER:$GOCTION_GROUP /var/log/goction/goction_stats.json
+    
     # Add current user to goction group
     usermod -aG $GOCTION_GROUP $SUDO_USER
     
     log_message "Permissions set up completed"
 }
 
+initialize_stats() {
+    print_message "Initializing stats file..."
+    
+    STATS_FILE="/var/log/goction/goction_stats.json"
+    if [ ! -s "$STATS_FILE" ]; then
+        echo '{"stats":{},"history":{}}' > "$STATS_FILE"
+    fi
+    
+    log_message "Stats file initialized"
+}
+
 # Function to create systemd service
 create_systemd_service() {
     print_message "Creating systemd service..."
-    cp $INSTALL_DIR/goction.service /etc/systemd/system/goction.service
+    cat << EOF > /etc/systemd/system/goction.service
+[Unit]
+Description=Goction API Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/goction serve
+Restart=on-failure
+User=$GOCTION_USER
+Group=$GOCTION_GROUP
+WorkingDirectory=/etc/goction
+
+[Install]
+WantedBy=multi-user.target
+EOF
     systemctl daemon-reload
     systemctl enable goction.service
     log_message "Systemd service created and enabled"
