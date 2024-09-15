@@ -4,7 +4,7 @@
     <img src="./goction.png" alt="Logo" width="350">
 </p>
 
-Goction is a lightweight and extensible platform designed to create, manage, and execute custom actions (called "goctions") via a command-line interface (CLI) and an HTTP API. It also provides a dashboard for monitoring and managing goctions.
+Goction is a lightweight and extensible platform designed to create, manage, and execute custom actions (called "goctions") via a command-line interface (CLI), an HTTP API, and a web-based dashboard. It provides powerful tools for automation, integration, and workflow management.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ Goction is a lightweight and extensible platform designed to create, manage, and
    - [Service Management](#service-management)
    - [Systemd Service Management](#systemd-service-management)
    - [Using the API](#using-the-api)
-   - [Dashboard and Execution](#dashboard-and-execution)
+   - [Dashboard](#dashboard)
    - [Advanced Features](#advanced-features)
 6. [Goction Example](#goction-example)
 7. [Project Structure](#project-structure)
@@ -34,7 +34,7 @@ Goction is a lightweight and extensible platform designed to create, manage, and
 - Dynamic loading of goctions via Go plugins
 - Intuitive CLI interface
 - Secure HTTP API for remote execution
-- Console-based monitoring dashboard
+- Web-based dashboard for monitoring and management
 - Flexible configuration via JSON
 - Advanced logging with logrus
 - Integration with systemd for robust service management
@@ -74,7 +74,7 @@ The JSON configuration file is automatically created on first launch:
 - For root: `/etc/goction/config.json`
 - For other users: `~/.config/goction/config.json`
 
-You can modify this file to change settings such as the port number, log file location, or API token.
+You can modify this file to change settings such as the port number, log file location, API token, or dashboard credentials.
 
 To view or reset the configuration:
 
@@ -130,36 +130,43 @@ goction stop
 Goction runs as a background service managed by systemd. You can interact with the Goction service using standard systemd commands:
 
 Start the Goction service:
+
 ```bash
 sudo systemctl start goction
 ```
 
 Stop the Goction service:
+
 ```bash
 sudo systemctl stop goction
 ```
 
 Restart the Goction service:
+
 ```bash
 sudo systemctl restart goction
 ```
 
 Check the status of the Goction service:
+
 ```bash
 sudo systemctl status goction
 ```
 
 Enable the Goction service to start at boot:
+
 ```bash
 sudo systemctl enable goction
 ```
 
 Disable the Goction service from starting at boot:
+
 ```bash
 sudo systemctl disable goction
 ```
 
 View the Goction service logs:
+
 ```bash
 sudo journalctl -u goction
 ```
@@ -174,19 +181,23 @@ Execute a goction via the HTTP API:
 curl -X POST -H "Content-Type: application/json" -H "X-API-Token: your-secret-token" -d '{"args":["arg1", "arg2"]}' http://localhost:8080/goctions/my_goction
 ```
 
-### Dashboard and Execution
+### Dashboard
 
-Display the dashboard:
+Goction provides a powerful web-based dashboard for managing and monitoring your goctions. To access the dashboard:
 
-```bash
-goction dashboard
-```
+1. Ensure the Goction service is running.
+2. Open your web browser and navigate to `http://localhost:8080` (or the configured address).
+3. Log in using the credentials set in your Goction configuration.
 
-Execute a goction:
+The dashboard offers the following features:
 
-```bash
-goction run my_goction [arg1 arg2 ...]
-```
+- Overview of Goction configuration
+- Detailed statistics for each goction
+- Execution history
+- Real-time logs visualization
+- Dark UI for comfortable use
+
+For more information on using the dashboard, refer to the [Dashboard Guide](https://goction.github.io/guide/dashboard.html).
 
 ### Advanced Features
 
@@ -273,17 +284,17 @@ goction/
 
 ## Security
 
-Goction uses an API token to secure requests. To display your current API token:
+Goction uses an API token to secure API requests and a username/password combination for dashboard access. To display your current API token:
 
 ```bash
 goction token
 ```
 
-Ensure you keep this token confidential and change it regularly.
+Ensure you keep this token and your dashboard credentials confidential and change them regularly.
 
 ## Logging
 
-Logs are managed by logrus and are written to the file specified in the configuration. They can be viewed via the dashboard or by using the `goction logs` command. For systemd service logs, use `sudo journalctl -u goction`.
+Logs are managed by logrus and are written to the file specified in the configuration. They can be viewed via the dashboard, by using the `goction logs` command, or for systemd service logs, use `sudo journalctl -u goction`.
 
 ## Troubleshooting
 
@@ -292,8 +303,9 @@ If you encounter issues:
 1. Check the log file for error messages.
 2. Ensure all goctions are properly compiled using the `goction update` command.
 3. Verify that the Goction service is running using `sudo systemctl status goction`.
-4. Check your firewall settings if you're having trouble with the API.
+4. Check your firewall settings if you're having trouble with the API or dashboard access.
 5. Use the `goction stats` command to check the execution history of a specific goction.
+6. If the dashboard is not accessible, verify the configured port and credentials in the config file.
 
 ## Uninstallation
 

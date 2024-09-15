@@ -2,16 +2,20 @@ module goction
 
 go 1.23.1
 
-require github.com/sirupsen/logrus v1.9.3
+require (
+	github.com/charmbracelet/lipgloss v0.13.0
+	github.com/sirupsen/logrus v1.9.3
+	github.com/valyala/quicktemplate v1.8.0
+)
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/bubbletea v1.1.0 // indirect
-	github.com/charmbracelet/lipgloss v0.13.0 // indirect
 	github.com/charmbracelet/x/ansi v0.2.3 // indirect
 	github.com/charmbracelet/x/term v0.2.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -25,6 +29,7 @@ require (
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
@@ -34,6 +39,7 @@ require (
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
+	github.com/gorilla/sessions v1.4.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	golang.org/x/sys v0.24.0 // indirect
 )

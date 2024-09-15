@@ -173,3 +173,17 @@ func (m *Manager) save() error {
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(data)
 }
+
+func (m *Manager) GetAllHistory() map[string][]ExecutionRecord {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+
+    // Créez une copie profonde de l'historique pour éviter les problèmes de concurrence
+    allHistory := make(map[string][]ExecutionRecord)
+    for name, records := range m.history {
+        allHistory[name] = make([]ExecutionRecord, len(records))
+        copy(allHistory[name], records)
+    }
+
+    return allHistory
+}

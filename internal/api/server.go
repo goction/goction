@@ -12,8 +12,10 @@ import (
 
 	"goction/internal/config"
 	"goction/internal/stats"
+	"goction/internal/api/dashboard"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,6 +27,7 @@ type Server struct {
 	logger        *logrus.Logger
 	stats         *stats.Manager
 	goctionsCache map[string]GoctionFunc
+	sessionStore  *sessions.CookieStore
 }
 
 func NewServer(cfg *config.Config) (*Server, error) {
@@ -42,6 +45,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		logger:        logger,
 		stats:         statsManager,
 		goctionsCache: make(map[string]GoctionFunc),
+		sessionStore:  sessions.NewCookieStore([]byte("secret-key")), // Use a secure, random key in production
 	}
 	s.routes()
 	return s, nil
@@ -65,10 +69,32 @@ func setupLogger(logger *logrus.Logger, cfg *config.Config) {
 
 func (s *Server) routes() {
 	s.router.Use(s.loggingMiddleware)
-	s.router.HandleFunc("/goctions/{goction}", s.authMiddleware(s.handleExecuteGoction)).Methods("POST")
-	s.router.HandleFunc("/goctions", s.authMiddleware(s.handleListGoctions)).Methods("GET")
-	s.router.HandleFunc("/goctions/{goction}/info", s.authMiddleware(s.handleGetGoctionInfo)).Methods("GET")
-	s.router.HandleFunc("/goctions/{goction}/history", s.authMiddleware(s.handleGetGoctionHistory)).Methods("GET")
+	
+	// API routes
+	api := s.router.PathPrefix("/api").Subrouter()
+	api.HandleFunc("/goctions/{goction}", s.authMiddleware(s.handleExecuteGoction)).Methods("POST")
+	api.HandleFunc("/goctions", s.authMiddleware(s.handleListGoctions)).Methods("GET")
+	api.HandleFunc("/goctions/{goction}/info", s.authMiddleware(s.handleGetGoctionInfo)).Methods("GET")
+	api.HandleFunc("/goctions/{goction}/history", s.authMiddleware(s.handleGetGoctionHistory)).Methods("GET")
+
+	// Dashboard routes
+	s.router.HandleFunc("/login", dashboard.LoginHandler(s.config, s.sessionStore)).Methods("GET", "POST")
+	s.router.HandleFunc("/logout", dashboard.LogoutHandler(s.sessionStore)).Methods("GET")
+	s.router.HandleFunc("/", s.authSessionMiddleware(dashboard.DashboardHandler(s.config, s.stats))).Methods("GET")
+
+	// Serve static files
+	s.router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./internal/api/dashboard/static"))))
+}
+
+func (s *Server) authSessionMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := s.sessionStore.Get(r, "goction-dashboard")
+		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	}
 }
 
 func (s *Server) Start() error {

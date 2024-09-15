@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const GoctionVersion = "1.0.0" // Add version information
+
 // Config holds the application configuration
 type Config struct {
 	GoctionsDir string `json:"goctions_dir"`
@@ -16,6 +18,8 @@ type Config struct {
 	LogFile     string `json:"log_file"`
 	APIToken    string `json:"api_token"`
 	StatsFile   string `json:"stats_file"`
+	DashboardUsername string `json:"dashboard_username"`
+	DashboardPassword string `json:"dashboard_password"`
 }
 
 // Load reads the configuration file and returns a Config struct
@@ -127,6 +131,8 @@ func createDefaultConfig(configPath string) (*Config, error) {
 		LogFile:     filepath.Join(filepath.Dir(configPath), "goction.log"),
 		APIToken:    uuid.New().String(),
 		StatsFile:   filepath.Join(filepath.Dir(configPath), "goction_stats.json"),
+		DashboardUsername: "admin",
+		DashboardPassword: uuid.New().String(),
 	}
 
 	if err := cfg.Save(); err != nil {

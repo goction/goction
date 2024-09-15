@@ -1,0 +1,169 @@
+{% import (
+    "goction/internal/viewmodels"
+    "time"
+    "strings"
+) %}
+
+{% func Dashboard(data viewmodels.DashboardData) %}
+<!DOCTYPE html>
+<html lang="en" class="has-background-black-bis">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goction Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        main {
+            flex: 1;
+        }
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="has-background-black-bis has-text-light">
+    <nav class="navbar is-black" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="/">
+                <img src="https://goction.github.io/images/goction.png" alt="Goction Logo" height="28">
+                <strong class="ml-2">Goction Dashboard</strong>
+            </a>
+            <div class="navbar-item">
+                <span class="tag is-primary">Version: {%s data.GoctionVersion %}</span>
+            </div>
+        </div>
+
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <div class="buttons">
+                        <a class="button is-primary" href="https://goction.github.io" target="_blank">
+                            <span class="icon">
+                                <i class="fas fa-book"></i>
+                            </span>
+                            <span>Documentation</span>
+                        </a>
+                        <a class="button is-dark" href="/logout">
+                            <span class="icon">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </span>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="section">
+            <div class="container">
+                <h1 class="title has-text-primary">Goction Configuration</h1>
+                <div class="box has-background-black-ter">
+                    <div class="content has-text-grey-light">
+                        <p><strong>Goctions Directory:</strong> {%s data.Config.GoctionsDir %}</p>
+                        <p><strong>Port:</strong> {%d data.Config.Port %}</p>
+                        <p><strong>Log File:</strong> {%s data.Config.LogFile %}</p>
+                        <p><strong>Stats File:</strong> {%s data.Config.StatsFile %}</p>
+                    </div>
+                </div>
+
+                <h1 class="title has-text-primary mt-6">Goction Statistics</h1>
+                <div class="box has-background-black-ter">
+                    <table class="table is-fullwidth has-background-black-ter has-text-grey-light">
+                        <thead>
+                            <tr>
+                                <th class="has-text-grey-light">Goction Name</th>
+                                <th class="has-text-grey-light">Total Calls</th>
+                                <th class="has-text-grey-light">Successful Calls</th>
+                                <th class="has-text-grey-light">Success Rate</th>
+                                <th class="has-text-grey-light">Total Duration</th>
+                                <th class="has-text-grey-light">Average Duration</th>
+                                <th class="has-text-grey-light">Last Executed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for name, stat := range data.Stats %}
+                            <tr>
+                                <td>{%s name %}</td>
+                                <td>{%d stat.TotalCalls %}</td>
+                                <td>{%d stat.SuccessfulCalls %}</td>
+                                <td>
+                                    {% if stat.TotalCalls > 0 %}
+                                        {%f= float64(stat.SuccessfulCalls) / float64(stat.TotalCalls) * 100 %}%
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>{%s stat.TotalDuration.String() %}</td>
+                                <td>
+                                    {% if stat.TotalCalls > 0 %}
+                                        {%s (stat.TotalDuration / time.Duration(stat.TotalCalls)).String() %}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>{%s stat.LastExecuted.Format("2006-01-02 15:04:05") %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% comment %} <h1 class="title has-text-primary mt-6">Execution History</h1>
+                <div class="box has-background-black-ter">
+                    <div class="content has-text-grey-light">
+                        {% for goctionName, history := range data.History %}
+                            <h3 class="has-text-grey-light">{%s goctionName %}</h3>
+                            <table class="table is-fullwidth has-background-black-ter has-text-grey-light">
+                                <thead>
+                                    <tr>
+                                        <th class="has-text-grey-light">Timestamp</th>
+                                        <th class="has-text-grey-light">Duration</th>
+                                        <th class="has-text-grey-light">Status</th>
+                                        <th class="has-text-grey-light">Result</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for _, record := range history %}
+                                    <tr>
+                                        <td>{%s record.Timestamp.Format("2006-01-02 15:04:05") %}</td>
+                                        <td>{%s time.Duration(record.Duration).String() %}</td>
+                                        <td>{%s record.Status %}</td>
+                                        <td>{%s record.Result %}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endfor %}
+                    </div>
+                </div> {% endcomment %}
+
+                <h1 class="title has-text-primary mt-6">Recent Logs</h1>
+                <div class="box has-background-black-ter">
+                    <div class="content has-text-grey-light log-container">
+                        <pre class="has-background-black-ter has-text-grey-light">{%s strings.Join(viewmodels.Reverse(data.RecentLogs), "\n") %}</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer has-background-black-ter">
+        <div class="content has-text-centered">
+            <p class="has-text-grey-light">
+                <strong class="has-text-primary">Goction</strong> by <a href="https://github.com/goction" class="has-text-primary">Goction Team</a>. The source code is licensed
+                <a href="http://opensource.org/licenses/mit-license.php" class="has-text-primary">MIT</a>.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
+{% endfunc %}
