@@ -189,6 +189,8 @@ setup_permissions() {
     chmod 755 /etc/goction
     chmod 755 /var/log/goction
     chmod 644 /etc/goction/config.json
+    chmod 666 /var/log/goction/goction.log
+    chmod 666 /var/log/goction/goction_stats.json
     
     log_message "Permissions set up completed"
 }

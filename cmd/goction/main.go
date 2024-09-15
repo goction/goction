@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -67,12 +68,15 @@ func initializeLogger(cfg *config.Config) (*logrus.Logger, error) {
 	}
 
 	// Set up file logging
-	file, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
 
-	logger.SetOutput(file)
+	// Use multi-writer to log to both file and console
+	mw := io.MultiWriter(os.Stdout, file)
+	logger.SetOutput(mw)
+
 	logger.SetLevel(logrus.DebugLevel)
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,

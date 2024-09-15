@@ -37,6 +37,15 @@ func NewManager(statsFile string) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create stats directory: %w", err)
 	}
 
+	// Create the stats file if it doesn't exist
+	if _, err := os.Stat(statsFile); os.IsNotExist(err) {
+		file, err := os.Create(statsFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create stats file: %w", err)
+		}
+		file.Close()
+	}
+
 	m := &Manager{
 		statsFile: statsFile,
 		stats:     make(map[string]*GoctionStats),
