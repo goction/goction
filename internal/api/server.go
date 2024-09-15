@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"goction/internal/api/dashboard"
 	"goction/internal/config"
 	"goction/internal/stats"
-	"goction/internal/api/dashboard"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -32,7 +32,9 @@ type Server struct {
 
 func NewServer(cfg *config.Config) (*Server, error) {
 	logger := logrus.New()
-	setupLogger(logger, cfg)
+	if err := setupLogger(logger, cfg); err != nil {
+		return nil, fmt.Errorf("failed to setup logger: %w", err)
+	}
 
 	statsManager, err := stats.NewManager(cfg.StatsFile)
 	if err != nil {
@@ -51,25 +53,32 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	return s, nil
 }
 
-func setupLogger(logger *logrus.Logger, cfg *config.Config) {
-	isService := os.Getenv("GOCTION_SERVICE") == "true"
-
-	if isService {
-		logger.SetOutput(os.Stdout)
-	} else {
-		logFile, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			logger.Fatalf("failed to open log file: %v", err)
-		}
-		logger.SetOutput(logFile)
+func setupLogger(logger *logrus.Logger, cfg *config.Config) error {
+	// Ensure log directory exists
+	logDir := filepath.Dir(cfg.LogFile)
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
-	logger.SetLevel(logrus.DebugLevel)
+	// Open log file
+	logFile, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open log file: %w", err)
+	}
+
+	// Configure logrus
+	logger.SetOutput(logFile)
+	logger.SetLevel(logrus.InfoLevel) // Ajustez le niveau de log selon vos besoins
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	return nil
 }
 
 func (s *Server) routes() {
 	s.router.Use(s.loggingMiddleware)
-	
+
 	// API routes
 	api := s.router.PathPrefix("/api").Subrouter()
 	api.HandleFunc("/goctions/{goction}", s.authMiddleware(s.handleExecuteGoction)).Methods("POST")

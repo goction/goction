@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -30,6 +31,12 @@ type Manager struct {
 }
 
 func NewManager(statsFile string) (*Manager, error) {
+	// Ensure the directory exists
+	dir := filepath.Dir(statsFile)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create stats directory: %w", err)
+	}
+
 	m := &Manager{
 		statsFile: statsFile,
 		stats:     make(map[string]*GoctionStats),
@@ -139,22 +146,19 @@ func (m *Manager) load() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if data.Stats != nil {
-		m.stats = data.Stats
-	} else {
-		m.stats = make(map[string]*GoctionStats)
-	}
-
-	if data.History != nil {
-		m.history = data.History
-	} else {
-		m.history = make(map[string][]ExecutionRecord)
-	}
+	m.stats = data.Stats
+	m.history = data.History
 
 	return nil
 }
 
 func (m *Manager) save() error {
+	// Ensure the directory exists
+	dir := filepath.Dir(m.statsFile)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create stats directory: %w", err)
+	}
+
 	file, err := os.Create(m.statsFile)
 	if err != nil {
 		return fmt.Errorf("failed to create stats file: %w", err)
@@ -175,15 +179,15 @@ func (m *Manager) save() error {
 }
 
 func (m *Manager) GetAllHistory() map[string][]ExecutionRecord {
-    m.mu.RLock()
-    defer m.mu.RUnlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-    // Créez une copie profonde de l'historique pour éviter les problèmes de concurrence
-    allHistory := make(map[string][]ExecutionRecord)
-    for name, records := range m.history {
-        allHistory[name] = make([]ExecutionRecord, len(records))
-        copy(allHistory[name], records)
-    }
+	// Créez une copie profonde de l'historique pour éviter les problèmes de concurrence
+	allHistory := make(map[string][]ExecutionRecord)
+	for name, records := range m.history {
+		allHistory[name] = make([]ExecutionRecord, len(records))
+		copy(allHistory[name], records)
+	}
 
-    return allHistory
+	return allHistory
 }

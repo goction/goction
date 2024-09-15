@@ -59,11 +59,11 @@ func LogoutHandler(store *sessions.CookieStore) http.HandlerFunc {
 }
 
 func getRecentLogs(logFilePath string, numLines int) ([]string, error) {
-	file, err := os.Open(logFilePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+    file, err := os.Open(logFilePath)
+    if err != nil {
+        return nil, err
+    }
+    defer file.Close()
 
 	var lines []string
 	scanner := bufio.NewScanner(file)

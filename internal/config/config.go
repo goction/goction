@@ -9,31 +9,27 @@ import (
 	"github.com/google/uuid"
 )
 
-const GoctionVersion = "1.0.0" // Add version information
+const GoctionVersion = "1.0.0"
+const ConfigDir = "/etc/goction"
 
 // Config holds the application configuration
 type Config struct {
-	GoctionsDir string `json:"goctions_dir"`
-	Port        int    `json:"port"`
-	LogFile     string `json:"log_file"`
-	APIToken    string `json:"api_token"`
-	StatsFile   string `json:"stats_file"`
+	GoctionsDir       string `json:"goctions_dir"`
+	Port              int    `json:"port"`
+	LogFile           string `json:"log_file"`
+	APIToken          string `json:"api_token"`
+	StatsFile         string `json:"stats_file"`
 	DashboardUsername string `json:"dashboard_username"`
 	DashboardPassword string `json:"dashboard_password"`
 }
 
 // Load reads the configuration file and returns a Config struct
 func Load() (*Config, error) {
-	configDir, err := getConfigDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get config directory: %w", err)
-	}
-
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(ConfigDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	configPath := filepath.Join(configDir, "config.json")
+	configPath := filepath.Join(ConfigDir, "config.json")
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return createDefaultConfig(configPath)
@@ -44,16 +40,7 @@ func Load() (*Config, error) {
 
 // Save writes the configuration to the config file
 func (c *Config) Save() error {
-	configDir, err := getConfigDir()
-	if err != nil {
-		return fmt.Errorf("failed to get config directory: %w", err)
-	}
-
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	configPath := filepath.Join(configDir, "config.json")
+	configPath := filepath.Join(ConfigDir, "config.json")
 
 	file, err := os.Create(configPath)
 	if err != nil {
@@ -72,12 +59,7 @@ func (c *Config) Save() error {
 
 // Reset resets the configuration to default values
 func Reset() error {
-	configDir, err := getConfigDir()
-	if err != nil {
-		return fmt.Errorf("failed to get config directory: %w", err)
-	}
-
-	configPath := filepath.Join(configDir, "config.json")
+	configPath := filepath.Join(ConfigDir, "config.json")
 
 	// Remove the existing config file
 	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
@@ -85,7 +67,7 @@ func Reset() error {
 	}
 
 	// Create a new default config
-	_, err = createDefaultConfig(configPath)
+	_, err := createDefaultConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to create new default config: %w", err)
 	}
@@ -110,36 +92,22 @@ func (c *Config) InitializeLogFile() error {
 	return nil
 }
 
-// Helper functions
-
-func getConfigDir() (string, error) {
-	if os.Geteuid() == 0 {
-		return "/etc/goction", nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get user home directory: %w", err)
-	}
-	return filepath.Join(home, ".config", "goction"), nil
-}
-
 func createDefaultConfig(configPath string) (*Config, error) {
-	cfg := &Config{
-		GoctionsDir: filepath.Join(filepath.Dir(configPath), "goctions"),
-		Port:        8080,
-		LogFile:     filepath.Join(filepath.Dir(configPath), "goction.log"),
-		APIToken:    uuid.New().String(),
-		StatsFile:   filepath.Join(filepath.Dir(configPath), "goction_stats.json"),
-		DashboardUsername: "admin",
-		DashboardPassword: uuid.New().String(),
-	}
+    cfg := &Config{
+        GoctionsDir:        "/etc/goction/goctions",
+        Port:               8080,
+        LogFile:            "/var/log/goction/goction.log",
+        APIToken:           uuid.New().String(),
+        StatsFile:          "/var/log/goction/goction_stats.json",
+        DashboardUsername:  "admin",
+        DashboardPassword:  uuid.New().String(),
+    }
 
-	if err := cfg.Save(); err != nil {
-		return nil, fmt.Errorf("failed to save default config: %w", err)
-	}
+    if err := cfg.Save(); err != nil {
+        return nil, fmt.Errorf("failed to save default config: %w", err)
+    }
 
-	return cfg, nil
+    return cfg, nil
 }
 
 func loadExistingConfig(configPath string) (*Config, error) {

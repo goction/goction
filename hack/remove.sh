@@ -56,45 +56,25 @@ rm -f /usr/local/bin/goction
 
 # Remove the Goction installation directory
 print_message "Removing Goction installation directory..."
-read -p "Enter the Goction installation path [/opt/goction]: " INSTALL_PATH
-INSTALL_PATH=${INSTALL_PATH:-/opt/goction}
+INSTALL_PATH="/opt/goction"
 rm -rf $INSTALL_PATH
 
-# Remove the Goction user and home directory
-print_message "Removing Goction user and home directory..."
+# Remove the Goction user and group
+print_message "Removing Goction user and group..."
 userdel -r goction 2>/dev/null || print_warning "Failed to remove Goction user. It might not exist."
+groupdel goction 2>/dev/null || print_warning "Failed to remove Goction group. It might not exist."
 
 # Remove Goction system-wide configuration
 print_message "Removing system-wide Goction configuration..."
 rm -rf /etc/goction
 
-# Remove user-specific Goction configuration
-if [ "$SUDO_USER" ]; then
-    USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
-    CONFIG_DIR="$USER_HOME/.config/goction"
-    
-    if [ -d "$CONFIG_DIR" ]; then
-        print_message "Removing user-specific Goction configuration..."
-        
-        # Check if there are any goctions in the user's directory
-        if [ -d "$CONFIG_DIR/goctions" ] && [ "$(ls -A $CONFIG_DIR/goctions)" ]; then
-            read -p "Do you want to remove all user goctions in $CONFIG_DIR/goctions? (y/N) " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]
-            then
-                print_message "Removing user goctions..."
-                rm -rf "$CONFIG_DIR"
-            else
-                print_message "Keeping user goctions. Removing other Goction configuration files..."
-                find "$CONFIG_DIR" -mindepth 1 -maxdepth 1 ! -name "goctions" -exec rm -rf {} +
-            fi
-        else
-            rm -rf "$CONFIG_DIR"
-        fi
-    fi
-else
-    print_warning "Cannot determine user home directory. You may need to manually remove ~/.config/goction if it exists."
-fi
+# Remove Goction logs and stats
+print_message "Removing Goction logs and stats..."
+rm -rf /var/log/goction
+
+# Clean up any remaining files in /tmp
+print_message "Cleaning up temporary files..."
+rm -rf /tmp/goction*
 
 print_message "Goction has been successfully uninstalled from your system."
 print_warning "If you have any custom data or configurations outside of the standard locations, you may need to remove them manually."

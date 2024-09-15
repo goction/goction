@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"goction/internal/api"
 	"goction/internal/cmd"
@@ -23,7 +24,11 @@ func main() {
 	}
 
 	// Initialize logger
-	logger := initializeLogger(cfg)
+	logger, err := initializeLogger(cfg)
+	if err != nil {
+		fmt.Printf("Error initializing logger: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Initialize stats manager
 	statsManager, err := stats.NewManager(cfg.StatsFile)
@@ -33,7 +38,7 @@ func main() {
 
 	// Check command-line arguments
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: goction [new|start|stop|serve|list|update|token|stats|dashboard|run|export|import]")
+		fmt.Println("Usage: goction [new|start|stop|serve|list|update|token|stats|dashboard|run|export|import|config|logs|self-update]")
 		os.Exit(1)
 	}
 
@@ -52,25 +57,28 @@ func main() {
 	fmt.Println("Goction execution completed.")
 }
 
-func initializeLogger(cfg *config.Config) *logrus.Logger {
+func initializeLogger(cfg *config.Config) (*logrus.Logger, error) {
 	logger := logrus.New()
 
-	// Initialize log file
-	if err := cfg.InitializeLogFile(); err != nil {
-		fmt.Printf("Error initializing log file: %v\n", err)
-		os.Exit(1)
+	// Ensure log directory exists
+	logDir := filepath.Dir(cfg.LogFile)
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create log directory: %w", err)
 	}
 
 	// Set up file logging
-	file, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		logger.SetOutput(file)
-	} else {
-		fmt.Printf("Failed to log to file, using default stderr: %v\n", err)
+	file, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
-	logger.SetLevel(logrus.DebugLevel)
 
-	return logger
+	logger.SetOutput(file)
+	logger.SetLevel(logrus.DebugLevel)
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	return logger, nil
 }
 
 func executeCommand(command string, args []string, cfg *config.Config, statsManager *stats.Manager, logger *logrus.Logger) error {
