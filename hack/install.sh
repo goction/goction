@@ -174,6 +174,21 @@ install_goction() {
     log_message "Goction installed in $INSTALL_DIR"
 }
 
+# Function to setup environment
+setup_environment() {
+    print_message "Setting up environment..."
+    
+    # Add Go to system-wide PATH
+    echo "export PATH=$PATH:/usr/local/go/bin" > /etc/profile.d/goction.sh
+    chmod +x /etc/profile.d/goction.sh
+    
+    # Reload shell to apply changes
+    source /etc/profile.d/goction.sh
+    
+    log_message "Environment setup completed"
+}
+
+# Function to setup permissions
 setup_permissions() {
     print_message "Setting up permissions..."
     
@@ -182,8 +197,8 @@ setup_permissions() {
     mkdir -p /var/log/goction
     
     # Set ownership
-    chown -R $GOCTION_USER:$GOCTION_USER /etc/goction
-    chown -R $GOCTION_USER:$GOCTION_USER /var/log/goction
+    chown -R $GOCTION_USER:$GOCTION_GROUP /etc/goction
+    chown -R $GOCTION_USER:$GOCTION_GROUP /var/log/goction
     
     # Set permissions
     chmod 755 /etc/goction
@@ -194,26 +209,18 @@ setup_permissions() {
     chmod 664 /var/log/goction/goction_stats.json
     
     # Add current user to goction group
-    usermod -aG $GOCTION_USER $SUDO_USER
+    usermod -aG $GOCTION_GROUP $SUDO_USER
     
     log_message "Permissions set up completed"
 }
 
 # Function to create systemd service
 create_systemd_service() {
-    print_message "Installing systemd service..."
-    cp "$INSTALL_DIR/goction.service" /etc/systemd/system/goction.service
-    
-    # Ensure the service file has the correct permissions
-    chmod 644 /etc/systemd/system/goction.service
-    
-    # Reload systemd to recognize the new service
+    print_message "Creating systemd service..."
+    cp $INSTALL_DIR/goction.service /etc/systemd/system/goction.service
     systemctl daemon-reload
-    
-    # Enable the service to start on boot
     systemctl enable goction.service
-    
-    log_message "Systemd service installed and enabled"
+    log_message "Systemd service created and enabled"
 }
 
 # Main installation process
@@ -222,33 +229,13 @@ main() {
     log_message "Installation started"
 
     check_dependencies
-
     create_goction_user
-
-    # Create necessary directories
-    mkdir -p "$INSTALL_DIR"
-    mkdir -p "/etc/goction/goctions"
-    mkdir -p "/var/log/goction"
-
-    # Set correct permissions
-    chown -R "$GOCTION_USER:$GOCTION_GROUP" "$INSTALL_DIR"
-    chown -R "$GOCTION_USER:$GOCTION_GROUP" "/etc/goction"
-    chown -R "$GOCTION_USER:$GOCTION_GROUP" "/var/log/goction"
-    chmod 755 "$INSTALL_DIR"
-    chmod 755 "/etc/goction"
-    chmod 755 "/var/log/goction"
-
-
     install_goction
-
+    setup_environment
+    setup_permissions
     create_systemd_service
 
-    # Initialize configuration
-    sudo -u "$GOCTION_USER" goction config reset
-
-    # Start the Goction service
     systemctl start goction.service
-    setup_permissions
     print_message "Goction service started"
 
     print_message "Goction has been successfully installed!"
@@ -257,7 +244,6 @@ main() {
     print_message "Dashboard credentials can be found in /etc/goction/config.json"
     log_message "Installation completed successfully"
 }
-
 
 # Run the main installation process
 main
