@@ -237,13 +237,12 @@ main() {
 
     create_systemd_service
 
-    setup_permissions
-    
     # Initialize configuration
     sudo -u "$GOCTION_USER" goction config reset
 
     # Start the Goction service
     systemctl start goction.service
+    setup_permissions
     print_message "Goction service started"
 
     print_message "Goction has been successfully installed!"
