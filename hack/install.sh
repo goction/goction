@@ -243,6 +243,10 @@ setup_permissions() {
     chmod g+w /var/log/goction/goction.log
     chmod g+w /var/log/goction/goction_stats.json
     
+    # Set ACL for the current user
+    setfacl -m u:$SUDO_USER:rw /var/log/goction/goction.log
+    setfacl -m u:$SUDO_USER:rw /var/log/goction/goction_stats.json
+    
     log_message "Permissions set up completed"
 }
 
@@ -261,7 +265,7 @@ update_sudoers() {
     print_message "Updating sudoers file..."
     
     # Add a line to preserve the PATH for the goction command
-    echo "Defaults!=/usr/local/bin/goction env_keep+=PATH" | sudo EDITOR='tee -a' visudo
+    echo "Defaults env_keep += \"PATH\"" | sudo EDITOR='tee -a' visudo
     
     log_message "Sudoers file updated"
 }
@@ -290,6 +294,18 @@ EOF
     log_message "Systemd service created and enabled"
 }
 
+# Ajoutez cette fonction pour créer un wrapper script
+create_wrapper_script() {
+    print_message "Creating wrapper script..."
+    cat << EOF > /usr/local/bin/goction-wrapper
+#!/bin/bash
+export PATH=\$PATH:/usr/local/go/bin
+/usr/local/bin/goction "\$@"
+EOF
+    chmod +x /usr/local/bin/goction-wrapper
+    log_message "Wrapper script created"
+}
+
 # Main installation process
 main() {
     print_message "Starting Goction installation..."
@@ -301,6 +317,7 @@ main() {
     setup_environment
     setup_permissions
     create_systemd_service
+    create_wrapper_script
     update_sudoers
 
     systemctl start goction.service
