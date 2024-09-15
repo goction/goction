@@ -232,12 +232,13 @@ main() {
     chmod 755 "/etc/goction"
     chmod 755 "/var/log/goction"
 
-    setup_permissions
 
     install_goction
 
     create_systemd_service
 
+    setup_permissions
+    
     # Initialize configuration
     sudo -u "$GOCTION_USER" goction config reset
 
