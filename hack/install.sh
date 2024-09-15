@@ -137,6 +137,27 @@ create_goction_user() {
     log_message "Goction user created"
 }
 
+initialize_config() {
+    print_message "Initializing configuration..."
+    
+    CONFIG_FILE="/etc/goction/config.json"
+    if [ ! -f "$CONFIG_FILE" ]; then
+        cat << EOF > "$CONFIG_FILE"
+{
+  "goctions_dir": "/etc/goction/goctions",
+  "port": 8080,
+  "log_file": "/var/log/goction/goction.log",
+  "api_token": "$(uuidgen)",
+  "stats_file": "/var/log/goction/goction_stats.json",
+  "dashboard_username": "admin",
+  "dashboard_password": "$(uuidgen)"
+}
+EOF
+    fi
+    
+    log_message "Configuration initialized"
+}
+
 # Function to install Goction
 install_goction() {
     print_message "Installing Goction..."
@@ -196,6 +217,9 @@ setup_permissions() {
     mkdir -p /etc/goction/goctions
     mkdir -p /var/log/goction
     
+    # Initialize configuration if it doesn't exist
+    initialize_config
+    
     # Set ownership
     chown -R $GOCTION_USER:$GOCTION_GROUP /etc/goction
     chown -R $GOCTION_USER:$GOCTION_GROUP /var/log/goction
@@ -205,6 +229,8 @@ setup_permissions() {
     chmod 775 /etc/goction/goctions
     chmod 775 /var/log/goction
     chmod 664 /etc/goction/config.json
+    touch /var/log/goction/goction.log
+    touch /var/log/goction/goction_stats.json
     chmod 664 /var/log/goction/goction.log
     chmod 664 /var/log/goction/goction_stats.json
     
