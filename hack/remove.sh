@@ -29,6 +29,7 @@ fi
 
 # Confirm uninstallation
 read -p "Are you sure you want to uninstall Goction? This will remove all Goction files and configurations. (y/N) " -n 1 -r
+
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]
 then
