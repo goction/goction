@@ -221,6 +221,9 @@ setup_permissions() {
     initialize_config
     initialize_stats
     
+    # Create log file if it doesn't exist
+    touch /var/log/goction/goction.log
+    
     # Set ownership
     chown -R $GOCTION_USER:$GOCTION_GROUP /etc/goction
     chown -R $GOCTION_USER:$GOCTION_GROUP /var/log/goction
