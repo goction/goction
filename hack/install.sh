@@ -137,6 +137,17 @@ create_goction_user() {
     log_message "Goction user created"
 }
 
+# Function to check if systemd is available
+check_systemd() {
+    if pidof systemd &>/dev/null; then
+        echo "systemd"
+    elif [ -f /proc/1/comm ] && [ "$(cat /proc/1/comm)" = "systemd" ]; then
+        echo "systemd"
+    else
+        echo "non-systemd"
+    fi
+}
+
 initialize_config() {
     print_message "Initializing configuration..."
     
@@ -272,10 +283,11 @@ update_sudoers() {
     log_message "Sudoers file updated"
 }
 
-# Function to create systemd service
-create_systemd_service() {
-    print_message "Creating systemd service..."
-    cat << EOF > /etc/systemd/system/goction.service
+# Function to create systemd service or start script
+create_service() {
+    if [ "$(check_systemd)" = "systemd" ]; then
+        print_message "Creating systemd service..."
+        cat << EOF > /etc/systemd/system/goction.service
 [Unit]
 Description=Goction API Service
 After=network.target
@@ -291,21 +303,34 @@ Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
 [Install]
 WantedBy=multi-user.target
 EOF
-    systemctl daemon-reload
-    systemctl enable goction.service
-    log_message "Systemd service created and enabled"
-}
-
-# Ajoutez cette fonction pour créer un wrapper script
-create_wrapper_script() {
-    print_message "Creating wrapper script..."
-    cat << EOF > /usr/local/bin/goction-wrapper
+        systemctl daemon-reload
+        systemctl enable goction.service
+        log_message "Systemd service created and enabled"
+    else
+        print_message "System is not using systemd. Creating a start script..."
+        cat << EOF > /usr/local/bin/start-goction.sh
 #!/bin/bash
-export PATH=\$PATH:/usr/local/go/bin
-/usr/local/bin/goction "\$@"
+
+GOCTION_USER="$GOCTION_USER"
+GOCTION_GROUP="$GOCTION_GROUP"
+LOG_FILE="/var/log/goction/goction.log"
+
+# Ensure the log directory exists
+mkdir -p "\$(dirname "\$LOG_FILE")"
+
+# Ensure the log file exists and has correct permissions
+touch "\$LOG_FILE"
+chown \$GOCTION_USER:\$GOCTION_GROUP "\$LOG_FILE"
+chmod 664 "\$LOG_FILE"
+
+# Start Goction
+sudo -u \$GOCTION_USER /usr/local/bin/goction serve >> "\$LOG_FILE" 2>&1 &
+
+echo "Goction service started. Check \$LOG_FILE for logs."
 EOF
-    chmod +x /usr/local/bin/goction-wrapper
-    log_message "Wrapper script created"
+        chmod +x /usr/local/bin/start-goction.sh
+        log_message "Start script created"
+    fi
 }
 
 # Main installation process
@@ -318,12 +343,16 @@ main() {
     install_goction
     setup_environment
     setup_permissions
-    create_systemd_service
-    create_wrapper_script
+    create_service
     update_sudoers
 
-    systemctl start goction.service
-    print_message "Goction service started"
+    if [ "$(check_systemd)" = "systemd" ]; then
+        systemctl start goction.service
+        print_message "Goction service started with systemd"
+    else
+        /usr/local/bin/start-goction.sh
+        print_message "Goction service started using start script"
+    fi
 
     print_message "Goction has been successfully installed!"
     print_message "You can now use the 'goction' command to manage your goctions."

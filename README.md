@@ -44,8 +44,9 @@ Goction is a lightweight and extensible platform designed to create, manage, and
 
 ## Prerequisites
 
-- Go 1.16 or higher
-- Operating system compatible with systemd (e.g., most Linux distributions)
+- Go 1.21 or higher
+- ~~Operating system compatible with systemd (e.g., most Linux distributions)~~
+- setfacl _sudo apt install acl_ 
 
 ## Installation
 
@@ -126,6 +127,12 @@ Stop the Goction service:
 
 ```bash
 goction stop
+```
+
+Or check pkill:
+
+```bash
+sudo pkill -f "goction serve"
 ```
 
 ### Systemd Service Management

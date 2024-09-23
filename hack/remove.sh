@@ -21,6 +21,17 @@ print_warning() {
     echo -e "${YELLOW}[Warning] ${1}${NC}"
 }
 
+# Function to check if systemd is available
+check_systemd() {
+    if pidof systemd &>/dev/null; then
+        echo "systemd"
+    elif [ -f /proc/1/comm ] && [ "$(cat /proc/1/comm)" = "systemd" ]; then
+        echo "systemd"
+    else
+        echo "non-systemd"
+    fi
+}
+
 # Check if the user is root
 if [ "$EUID" -ne 0 ]; then
     print_error "This script must be run as root"
@@ -37,18 +48,24 @@ then
     exit 0
 fi
 
-# Stop and disable the Goction service
-print_message "Stopping and disabling Goction service..."
-systemctl stop goction.service || print_warning "Failed to stop Goction service. It might not be running."
-systemctl disable goction.service || print_warning "Failed to disable Goction service. It might not be enabled."
+# Stop and remove the Goction service
+if [ "$(check_systemd)" = "systemd" ]; then
+    print_message "Stopping and disabling Goction service..."
+    systemctl stop goction.service || print_warning "Failed to stop Goction service. It might not be running."
+    systemctl disable goction.service || print_warning "Failed to disable Goction service. It might not be enabled."
+    
+    print_message "Removing systemd service file..."
+    rm -f /etc/systemd/system/goction.service
 
-# Remove the systemd service file
-print_message "Removing systemd service file..."
-rm -f /etc/systemd/system/goction.service
-
-# Reload systemd
-print_message "Reloading systemd..."
-systemctl daemon-reload
+    print_message "Reloading systemd..."
+    systemctl daemon-reload
+else
+    print_message "Stopping Goction process..."
+    pkill -f "goction serve" || print_warning "Failed to stop Goction process. It might not be running."
+    
+    print_message "Removing start script..."
+    rm -f /usr/local/bin/start-goction.sh
+fi
 
 # Remove the Goction executable
 print_message "Removing Goction executable..."
@@ -71,6 +88,10 @@ rm -rf /etc/goction
 # Remove Goction logs and stats
 print_message "Removing Goction logs and stats..."
 rm -rf /var/log/goction
+
+# Remove Goction environment file
+print_message "Removing Goction environment file..."
+rm -f /etc/profile.d/goction.sh
 
 # Clean up any remaining files in /tmp
 print_message "Cleaning up temporary files..."

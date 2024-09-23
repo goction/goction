@@ -51,21 +51,53 @@ func CreateNewGoction(args []string, cfg *config.Config) error {
 	return nil
 }
 
+// checkSystemd checks if systemd is available
+func checkSystemd() bool {
+	_, err := exec.LookPath("systemctl")
+	return err == nil
+}
+
 // StartService starts the Goction service
 func StartService(cfg *config.Config) error {
-	cmd := exec.Command(os.Args[0], "serve")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start service: %w", err)
+	if checkSystemd() {
+		cmd := exec.Command("sudo", "systemctl", "start", "goction.service")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to start Goction service: %w", err)
+		}
+		fmt.Println("Goction service started with systemd")
+	} else {
+		cmd := exec.Command("sudo", "/usr/local/bin/start-goction.sh")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to start Goction service: %w", err)
+		}
+		fmt.Println("Goction service started using start script")
 	}
-	fmt.Println("Goction service started in background")
 	return nil
 }
 
 // StopService stops the Goction service
 func StopService(cfg *config.Config) error {
-	fmt.Println("Goction service stop command received. Please use system service manager to stop the service.")
+	if checkSystemd() {
+		cmd := exec.Command("sudo", "systemctl", "stop", "goction.service")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to stop Goction service: %w", err)
+		}
+		fmt.Println("Goction service stopped with systemd")
+	} else {
+		cmd := exec.Command("sudo", "pkill", "-f", "goction serve")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to stop Goction service: %w", err)
+		}
+		fmt.Println("Goction service stopped")
+	}
 	return nil
 }
 
@@ -175,9 +207,6 @@ func RunGoction(name string, args []string, cfg *config.Config) error {
 	}
 
 	plug, err := plugin.Open(goctionPath)
-	if err != nil {
-		return fmt.Errorf("could not open goction plugin: %w", err)
-	}
 	if err != nil {
 		return fmt.Errorf("could not open goction plugin: %w", err)
 	}
@@ -481,7 +510,7 @@ func ShowLogs(cfg *config.Config) error {
 func SelfUpdate() error {
 	// This is a placeholder. Implement actual self-update logic here.
 	fmt.Println("Self-update functionality is not yet implemented.")
-	fmt.Println("Please check https://github.com/goction/goction.git for updates.")
+	fmt.Println("Please check https://github.com/goction/goction for updates.")
 	return nil
 }
 
